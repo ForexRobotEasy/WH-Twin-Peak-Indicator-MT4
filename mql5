@@ -1,0 +1,120 @@
+
+// Program: WH Twin Peak Indicator MT4
+// Developer's Site: forexroboteasy.com
+// Development Name: Forex Robot Easy Team
+
+// Import necessary libraries
+#include <Trade\Trade.mqh>
+#include <Indicators\Indicators.mqh>
+
+// Define constant variables
+#define PEAK_THRESHOLD 0.001     // Threshold to determine if a peak is reached
+#define SIGNAL_BUFFER_SIZE 5     // Size of the buffer to store peak signals
+
+// Define global variables
+double peakBuffer[SIGNAL_BUFFER_SIZE];   // Buffer to store peak signals
+int peakBufferCount = 0;                  // Counter for buffer
+
+// Custom indicator class for WH Twin Peak Indicator
+class WH_Twin_Peak_Indicator : public CIndicator
+{
+private:
+   double highestHigh;   // Highest high point in the market
+   double lowestLow;     // Lowest low point in the market
+   CTrade trade;         // Trade class object
+
+public:
+   // Constructor
+   WH_Twin_Peak_Indicator()
+   {
+      highestHigh = 0;
+      lowestLow = 0;
+   }
+
+   // Function to analyze the market's high and low points
+   void AnalyzeMarketPoints()
+   {
+      double currentHigh = iHigh(_Symbol, 0, 0);
+      double currentLow = iLow(_Symbol, 0, 0);
+
+      // Check if current high is higher than previous highest high
+      if (currentHigh > highestHigh)
+      {
+         highestHigh = currentHigh;
+         
+         // Generate signal when a new peak is reached
+         GeneratePeakSignal(currentHigh);
+      }
+
+      // Check if current low is lower than previous lowest low
+      if (currentLow < lowestLow)
+      {
+         lowestLow = currentLow;
+         
+         // Generate signal when a new low is reached
+         GenerateLowSignal(currentLow);
+      }
+   }
+
+   // Function to generate a signal when a new peak is reached
+   void GeneratePeakSignal(double peak)
+   {
+      if (peakBufferCount < SIGNAL_BUFFER_SIZE)
+      {
+         peakBuffer[peakBufferCount] = peak;
+         peakBufferCount++;
+      }
+      else
+      {
+         // Send signal to trader
+         trade.Buy(_Symbol, 1);
+         
+         // Clear the buffer and reset the counter
+         peakBufferCount = 0;
+         ArrayInitialize(peakBuffer, 0);
+      }
+   }
+
+   // Function to generate a signal when a new low is reached
+   void GenerateLowSignal(double low)
+   {
+      if (peakBufferCount < SIGNAL_BUFFER_SIZE)
+      {
+         peakBuffer[peakBufferCount] = low;
+         peakBufferCount++;
+      }
+      else
+      {
+         // Send signal to trader
+         trade.Sell(_Symbol, 1);
+         
+         // Clear the buffer and reset the counter
+         peakBufferCount = 0;
+         ArrayInitialize(peakBuffer, 0);
+      }
+   }
+};
+
+// Expert Advisor start function
+int OnInit()
+{
+   // Create an instance of the WH Twin Peak Indicator
+   WH_Twin_Peak_Indicator twinPeakIndicator;
+
+   return(INIT_SUCCEEDED);
+}
+
+// Expert Advisor tick function
+void OnTick()
+{
+   // Analyze market points using the WH Twin Peak Indicator
+   twinPeakIndicator.AnalyzeMarketPoints();
+}
+
+// Expert Advisor deinitialization function
+void OnDeinit(const int reason)
+{
+   // Perform any necessary cleanup
+}
+
+// Expert Advisor program end
